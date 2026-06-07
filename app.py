@@ -7,10 +7,6 @@ app = Flask(__name__)
 DATABASE = os.environ.get("DATABASE_PATH", "todo.db")
 
 
-# ---------------------------------------------------------------------------
-# Database helpers
-# ---------------------------------------------------------------------------
-
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
@@ -40,13 +36,11 @@ def init_db():
     """)
     db.commit()
 
-    # Migrate existing table: add deadline column if missing
     cols = [row[1] for row in db.execute("PRAGMA table_info(items)").fetchall()]
     if "deadline" not in cols:
         db.execute("ALTER TABLE items ADD COLUMN deadline TEXT DEFAULT NULL")
         db.commit()
 
-    # Pre-populate if empty
     count = db.execute("SELECT COUNT(*) FROM items").fetchone()[0]
     if count == 0:
         now = int(time.time())
@@ -59,10 +53,6 @@ def init_db():
         db.commit()
     db.close()
 
-
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
@@ -83,7 +73,6 @@ def add_item():
     if not text:
         return jsonify({"error": "text required"}), 400
     deadline = (data.get("deadline") or "").strip() or None
-    # Validate ISO date format YYYY-MM-DD if provided
     if deadline:
         import re
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", deadline):
@@ -109,10 +98,35 @@ def update_item(item_id):
         return jsonify({"error": "not found"}), 404
     done = data.get("done", row["done"])
     text = data.get("text", row["text"])
-    # Allow explicitly clearing deadline by passing null/empty string
     if "deadline" in data:
         deadline = (data["deadline"] or "").strip() or None
     else:
         deadline = row["deadline"]
     db.execute(
-        "UPDATE items SET done = ?, text = ?, de
+        "UPDATE items SET done=?, text=?, deadline=?, updated=? WHERE id=?",
+        (int(done), text, deadline, now, item_id),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    return jsonify(dict(row))
+
+
+@app.route("/api/items/<int:item_id>", methods=["DELETE"])
+def delete_item(item_id):
+    db = get_db()
+    db.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/poll")
+def poll():
+    db = get_db()
+    row = db.execute("SELECT MAX(updated) as ts, COUNT(*) as n FROM items").fetchone()
+    return jsonify({"ts": row["ts"] or 0, "n": row["n"]})
+
+
+if __name__ == "__main__":
+    init_db()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
