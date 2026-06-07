@@ -33,11 +33,18 @@ def init_db():
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             text     TEXT    NOT NULL,
             done     INTEGER NOT NULL DEFAULT 0,
+            deadline TEXT    DEFAULT NULL,
             created  INTEGER NOT NULL,
             updated  INTEGER NOT NULL
         )
     """)
     db.commit()
+
+    # Migrate existing table: add deadline column if missing
+    cols = [row[1] for row in db.execute("PRAGMA table_info(items)").fetchall()]
+    if "deadline" not in cols:
+        db.execute("ALTER TABLE items ADD COLUMN deadline TEXT DEFAULT NULL")
+        db.commit()
 
     # Pre-populate if empty
     count = db.execute("SELECT COUNT(*) FROM items").fetchone()[0]
@@ -46,7 +53,7 @@ def init_db():
         seeds = ["Dry cleaning", "Drop off charity", "Buy Maya's food", "Buy goldfish"]
         for text in seeds:
             db.execute(
-                "INSERT INTO items (text, done, created, updated) VALUES (?, 0, ?, ?)",
+                "INSERT INTO items (text, done, deadline, created, updated) VALUES (?, 0, NULL, ?, ?)",
                 (text, now, now),
             )
         db.commit()
@@ -75,11 +82,17 @@ def add_item():
     text = (data.get("text") or "").strip()
     if not text:
         return jsonify({"error": "text required"}), 400
+    deadline = (data.get("deadline") or "").strip() or None
+    # Validate ISO date format YYYY-MM-DD if provided
+    if deadline:
+        import re
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", deadline):
+            return jsonify({"error": "deadline must be YYYY-MM-DD"}), 400
     now = int(time.time())
     db = get_db()
     cur = db.execute(
-        "INSERT INTO items (text, done, created, updated) VALUES (?, 0, ?, ?)",
-        (text, now, now),
+        "INSERT INTO items (text, done, deadline, created, updated) VALUES (?, 0, ?, ?, ?)",
+        (text, deadline, now, now),
     )
     db.commit()
     row = db.execute("SELECT * FROM items WHERE id = ?", (cur.lastrowid,)).fetchone()
@@ -96,32 +109,10 @@ def update_item(item_id):
         return jsonify({"error": "not found"}), 404
     done = data.get("done", row["done"])
     text = data.get("text", row["text"])
+    # Allow explicitly clearing deadline by passing null/empty string
+    if "deadline" in data:
+        deadline = (data["deadline"] or "").strip() or None
+    else:
+        deadline = row["deadline"]
     db.execute(
-        "UPDATE items SET done = ?, text = ?, updated = ? WHERE id = ?",
-        (int(done), text, now, item_id),
-    )
-    db.commit()
-    row = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
-    return jsonify(dict(row))
-
-
-@app.route("/api/items/<int:item_id>", methods=["DELETE"])
-def delete_item(item_id):
-    db = get_db()
-    db.execute("DELETE FROM items WHERE id = ?", (item_id,))
-    db.commit()
-    return jsonify({"ok": True})
-
-
-@app.route("/api/poll")
-def poll():
-    """Return the max `updated` timestamp so clients can detect changes cheaply."""
-    db = get_db()
-    row = db.execute("SELECT MAX(updated) as ts, COUNT(*) as n FROM items").fetchone()
-    return jsonify({"ts": row["ts"] or 0, "n": row["n"]})
-
-
-if __name__ == "__main__":
-    init_db()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+        "UPDATE items SET done = ?, text = ?, de
