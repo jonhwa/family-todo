@@ -7,21 +7,25 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Family To-Do</title>
   <style>
-    /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #f7f7f5;
-      --surface:   #ffffff;
-      --border:    #e8e8e4;
-      --accent:    #5b8dee;
-      --accent-dk: #3a6fd8;
-      --done-col:  #b0b0a8;
-      --danger:    #e05252;
-      --text:      #1a1a1a;
-      --text-sub:  #888880;
-      --radius:    14px;
-      --shadow:    0 2px 12px rgba(0,0,0,.07);
+      --bg:          #f7f7f5;
+      --surface:     #ffffff;
+      --border:      #e8e8e4;
+      --accent:      #5b8dee;
+      --accent-dk:   #3a6fd8;
+      --done-col:    #b0b0a8;
+      --danger:      #e05252;
+      --warn:        #f59e0b;
+      --warn-bg:     #fffbeb;
+      --warn-border: #fde68a;
+      --over-bg:     #fff5f5;
+      --over-border: #fecaca;
+      --text:        #1a1a1a;
+      --text-sub:    #888880;
+      --radius:      14px;
+      --shadow:      0 2px 12px rgba(0,0,0,.07);
     }
 
     html, body {
@@ -32,7 +36,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Layout ── */
     .app {
       max-width: 560px;
       margin: 0 auto;
@@ -67,29 +70,40 @@
 
     /* ── Add form ── */
     .add-form {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .add-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 22px;
     }
-    .add-form input {
+    .add-form input[type="text"] {
       flex: 1;
-      height: 52px;
-      padding: 0 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius);
+      height: 48px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
       font-size: 1rem;
-      background: var(--surface);
+      background: var(--bg);
       color: var(--text);
       outline: none;
       transition: border-color .2s;
       -webkit-appearance: none;
     }
-    .add-form input:focus { border-color: var(--accent); }
-    .add-form input::placeholder { color: var(--text-sub); }
-    .add-form button {
-      width: 52px; height: 52px;
+    .add-form input[type="text"]:focus { border-color: var(--accent); }
+    .add-form input[type="text"]::placeholder { color: var(--text-sub); }
+
+    .add-form button[type="submit"] {
+      width: 48px; height: 48px;
       border: none;
-      border-radius: var(--radius);
+      border-radius: 10px;
       background: var(--accent);
       color: #fff;
       font-size: 1.6rem;
@@ -100,7 +114,51 @@
       transition: background .15s, transform .1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .add-form button:active { background: var(--accent-dk); transform: scale(.95); }
+    .add-form button[type="submit"]:active { background: var(--accent-dk); transform: scale(.95); }
+
+    /* Deadline row */
+    .deadline-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .deadline-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .deadline-toggle input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .deadline-toggle span {
+      font-size: .88rem;
+      color: var(--text-sub);
+    }
+    .deadline-picker {
+      display: none;
+      flex: 1;
+    }
+    .deadline-picker.visible { display: block; }
+    .deadline-picker input[type="date"] {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: .9rem;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color .2s;
+    }
+    .deadline-picker input[type="date"]:focus { border-color: var(--accent); }
 
     /* ── Section labels ── */
     .section-label {
@@ -123,7 +181,7 @@
 
     .item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 14px;
       background: var(--surface);
       border: 1.5px solid var(--border);
@@ -137,9 +195,19 @@
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    .item.approaching {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+    }
+    .item.overdue {
+      background: var(--over-bg);
+      border-color: var(--over-border);
+    }
     .item.done-item {
-      opacity: .55;
+      opacity: .5;
       background: #fafaf8;
+      border-color: var(--border);
       box-shadow: none;
     }
 
@@ -151,6 +219,7 @@
       background: transparent;
       cursor: pointer;
       flex-shrink: 0;
+      margin-top: 1px;
       display: flex; align-items: center; justify-content: center;
       transition: border-color .15s, background .15s;
       -webkit-tap-highlight-color: transparent;
@@ -169,9 +238,15 @@
       display: block;
     }
 
-    /* Item text */
-    .item-text {
+    /* Item body */
+    .item-body {
       flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .item-text {
       font-size: 1.05rem;
       line-height: 1.4;
       word-break: break-word;
@@ -179,6 +254,34 @@
     .done-item .item-text {
       text-decoration: line-through;
       color: var(--done-col);
+    }
+
+    /* Deadline badge */
+    .deadline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .76rem;
+      font-weight: 500;
+      border-radius: 6px;
+      padding: 2px 7px;
+      width: fit-content;
+      background: #f0f4ff;
+      color: #4a6fa5;
+      border: 1px solid #d5e0f5;
+    }
+    .deadline-badge.approaching {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+    .deadline-badge.overdue {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+    .done-item .deadline-badge {
+      opacity: .5;
     }
 
     /* Delete button */
@@ -192,6 +295,7 @@
       display: flex; align-items: center; justify-content: center;
       border-radius: 8px;
       flex-shrink: 0;
+      margin-top: -2px;
       transition: color .15s, background .15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -224,9 +328,20 @@
   </header>
 
   <form class="add-form" id="addForm">
-    <input type="text" id="newItem" placeholder="Add something…" autocomplete="off"
-           autocorrect="off" spellcheck="false" maxlength="200" />
-    <button type="submit" aria-label="Add item">+</button>
+    <div class="add-row">
+      <input type="text" id="newItem" placeholder="Add something…" autocomplete="off"
+             autocorrect="off" spellcheck="false" maxlength="200" />
+      <button type="submit" aria-label="Add item">+</button>
+    </div>
+    <div class="deadline-row">
+      <label class="deadline-toggle">
+        <input type="checkbox" id="deadlineCheck" />
+        <span>Set deadline</span>
+      </label>
+      <div class="deadline-picker" id="deadlinePicker">
+        <input type="date" id="deadlineDate" />
+      </div>
+    </div>
   </form>
 
   <div id="todoSection">
@@ -243,16 +358,58 @@
 </div>
 
 <script>
-  const todoList  = document.getElementById('todoList');
-  const doneList  = document.getElementById('doneList');
+  const todoList    = document.getElementById('todoList');
+  const doneList    = document.getElementById('doneList');
   const doneSection = document.getElementById('doneSection');
-  const syncDot   = document.getElementById('syncDot');
-  const addForm   = document.getElementById('addForm');
-  const newItemEl = document.getElementById('newItem');
+  const syncDot     = document.getElementById('syncDot');
+  const addForm     = document.getElementById('addForm');
+  const newItemEl   = document.getElementById('newItem');
+  const deadlineCheck  = document.getElementById('deadlineCheck');
+  const deadlinePicker = document.getElementById('deadlinePicker');
+  const deadlineDate   = document.getElementById('deadlineDate');
 
-  let items = [];
+  // Toggle deadline picker visibility
+  deadlineCheck.addEventListener('change', () => {
+    deadlinePicker.classList.toggle('visible', deadlineCheck.checked);
+    if (deadlineCheck.checked) deadlineDate.focus();
+    else deadlineDate.value = '';
+  });
+
+  let items  = [];
   let lastTs = 0;
   let lastN  = -1;
+
+  // ── Deadline helpers ──────────────────────────────────────────────────────
+  // Returns 'overdue' | 'approaching' | 'normal' | null
+  function deadlineStatus(deadline) {
+    if (!deadline) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(deadline + 'T00:00:00');
+    const diffDays = Math.round((due - today) / 86400000);
+    if (diffDays < 0)  return 'overdue';
+    if (diffDays <= 2) return 'approaching';
+    return 'normal';
+  }
+
+  function formatDeadline(deadline, status) {
+    if (!deadline) return '';
+    const due = new Date(deadline + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((due - today) / 86400000);
+
+    let label;
+    if (diffDays === 0)       label = 'Today';
+    else if (diffDays === 1)  label = 'Tomorrow';
+    else if (diffDays === -1) label = 'Yesterday';
+    else if (diffDays < -1)   label = `${Math.abs(diffDays)}d overdue`;
+    else {
+      label = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    const icon = status === 'overdue' ? '⚠️' : status === 'approaching' ? '🔔' : '📅';
+    return `${icon} ${label}`;
+  }
 
   // ── Render ──────────────────────────────────────────────────────────────
   function render(data) {
@@ -262,7 +419,6 @@
 
     renderList(todoList, todo);
     renderList(doneList, done);
-
     doneSection.style.display = done.length ? '' : 'none';
 
     if (todo.length === 0 && done.length === 0) {
@@ -271,154 +427,11 @@
   }
 
   function renderList(el, arr) {
-    // Preserve existing nodes where possible to avoid flicker
     const existing = {};
     el.querySelectorAll('[data-id]').forEach(n => existing[n.dataset.id] = n);
-
     const newIds = new Set(arr.map(i => String(i.id)));
 
-    // Remove stale
-    Object.keys(existing).forEach(id => {
-      if (!newIds.has(id)) existing[id].remove();
-    });
+    Object.keys(existing).forEach(id => { if (!newIds.has(id)) existing[id].remove(); });
 
-    // Insert / update
-    arr.forEach((item, idx) => {
+    arr.forEach(item => {
       const id = String(item.id);
-      let node = existing[id];
-      if (!node) {
-        node = makeItem(item);
-        el.appendChild(node);
-      } else {
-        // update text & check state if changed
-        const textEl = node.querySelector('.item-text');
-        const checkBtn = node.querySelector('.check-btn');
-        if (textEl.textContent !== item.text) textEl.textContent = item.text;
-        const isDone = !!item.done;
-        if (checkBtn.classList.contains('checked') !== isDone) {
-          checkBtn.classList.toggle('checked', isDone);
-          node.classList.toggle('done-item', isDone);
-        }
-      }
-    });
-
-    if (arr.length === 0) el.innerHTML = '';
-  }
-
-  function makeItem(item) {
-    const li = document.createElement('li');
-    li.className = 'item' + (item.done ? ' done-item' : '');
-    li.dataset.id = item.id;
-
-    const check = document.createElement('button');
-    check.className = 'check-btn' + (item.done ? ' checked' : '');
-    check.setAttribute('aria-label', item.done ? 'Mark undone' : 'Mark done');
-    check.addEventListener('click', () => toggleDone(item.id, !item.done));
-
-    const text = document.createElement('span');
-    text.className = 'item-text';
-    text.textContent = item.text;
-
-    const del = document.createElement('button');
-    del.className = 'del-btn';
-    del.setAttribute('aria-label', 'Delete');
-    del.textContent = '×';
-    del.addEventListener('click', () => deleteItem(item.id));
-
-    li.append(check, text, del);
-    return li;
-  }
-
-  // ── API calls ────────────────────────────────────────────────────────────
-  async function fetchItems() {
-    setSyncing(true);
-    try {
-      const r = await fetch('/api/items');
-      if (!r.ok) throw new Error(r.status);
-      const data = await r.json();
-      render(data);
-      if (data.length) lastTs = Math.max(...data.map(i => i.updated));
-      lastN = data.length;
-      setSyncing(false);
-    } catch(e) {
-      setError();
-    }
-  }
-
-  async function addItem(text) {
-    const r = await fetch('/api/items', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ text })
-    });
-    if (!r.ok) throw new Error(r.status);
-    await fetchItems();
-  }
-
-  async function toggleDone(id, done) {
-    const node = document.querySelector(`[data-id="${id}"]`);
-    if (node) {
-      const checkBtn = node.querySelector('.check-btn');
-      checkBtn.classList.toggle('checked', done);
-      node.classList.toggle('done-item', done);
-    }
-    await fetch(`/api/items/${id}`, {
-      method: 'PATCH',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ done })
-    });
-    await fetchItems();
-  }
-
-  async function deleteItem(id) {
-    const node = document.querySelector(`[data-id="${id}"]`);
-    if (node) node.style.transform = 'translateX(30px)';
-    setTimeout(async () => {
-      await fetch(`/api/items/${id}`, { method: 'DELETE' });
-      await fetchItems();
-    }, 120);
-  }
-
-  // ── Polling ───────────────────────────────────────────────────────────────
-  async function poll() {
-    try {
-      const r = await fetch('/api/poll');
-      if (!r.ok) return;
-      const { ts, n } = await r.json();
-      if (ts !== lastTs || n !== lastN) {
-        await fetchItems();
-      } else {
-        setSyncing(false);
-      }
-    } catch(e) {
-      setError();
-    }
-  }
-
-  function setSyncing(active) {
-    syncDot.className = 'sync-dot' + (active ? ' syncing' : '');
-  }
-  function setError() {
-    syncDot.className = 'sync-dot error';
-  }
-
-  setInterval(poll, 3000);
-
-  // ── Form ─────────────────────────────────────────────────────────────────
-  addForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    const text = newItemEl.value.trim();
-    if (!text) return;
-    newItemEl.value = '';
-    try {
-      await addItem(text);
-    } catch(e) {
-      setError();
-    }
-  });
-
-  // ── Boot ─────────────────────────────────────────────────────────────────
-  fetchItems();
-</script>
-</body>
-</html>
