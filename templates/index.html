@@ -45,7 +45,6 @@
       flex-direction: column;
     }
 
-    /* ── Header ── */
     header {
       padding: 28px 4px 20px;
       display: flex;
@@ -68,7 +67,6 @@
     .sync-dot.syncing { background: #ffcc00; }
     .sync-dot.error   { background: var(--danger); }
 
-    /* ── Add form ── */
     .add-form {
       background: var(--surface);
       border: 1.5px solid var(--border);
@@ -116,7 +114,6 @@
     }
     .add-form button[type="submit"]:active { background: var(--accent-dk); transform: scale(.95); }
 
-    /* Deadline row */
     .deadline-row {
       display: flex;
       align-items: center;
@@ -160,7 +157,6 @@
     }
     .deadline-picker input[type="date"]:focus { border-color: var(--accent); }
 
-    /* ── Section labels ── */
     .section-label {
       font-size: .72rem;
       font-weight: 600;
@@ -170,7 +166,6 @@
       padding: 0 4px 8px;
     }
 
-    /* ── Item list ── */
     .list {
       list-style: none;
       display: flex;
@@ -195,7 +190,6 @@
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     .item.approaching {
       background: var(--warn-bg);
       border-color: var(--warn-border);
@@ -211,7 +205,6 @@
       box-shadow: none;
     }
 
-    /* Custom checkbox */
     .check-btn {
       width: 28px; height: 28px;
       border-radius: 50%;
@@ -238,7 +231,6 @@
       display: block;
     }
 
-    /* Item body */
     .item-body {
       flex: 1;
       min-width: 0;
@@ -256,7 +248,6 @@
       color: var(--done-col);
     }
 
-    /* Deadline badge */
     .deadline-badge {
       display: inline-flex;
       align-items: center;
@@ -280,11 +271,8 @@
       color: #991b1b;
       border-color: #fecaca;
     }
-    .done-item .deadline-badge {
-      opacity: .5;
-    }
+    .done-item .deadline-badge { opacity: .5; }
 
-    /* Delete button */
     .del-btn {
       width: 36px; height: 36px;
       border: none;
@@ -301,7 +289,6 @@
     }
     .del-btn:active { color: var(--danger); background: #fff0f0; }
 
-    /* ── Empty state ── */
     .empty {
       text-align: center;
       padding: 40px 20px;
@@ -310,7 +297,6 @@
     }
     .empty .emoji { font-size: 2.5rem; display: block; margin-bottom: 10px; }
 
-    /* ── Footer ── */
     footer {
       margin-top: auto;
       padding: 16px 4px;
@@ -323,13 +309,13 @@
 <body>
 <div class="app">
   <header>
-    <h1>🏠 Family To-Do</h1>
+    <h1>&#127968; Family To-Do</h1>
     <div class="sync-dot" id="syncDot" title="Live sync"></div>
   </header>
 
   <form class="add-form" id="addForm">
     <div class="add-row">
-      <input type="text" id="newItem" placeholder="Add something…" autocomplete="off"
+      <input type="text" id="newItem" placeholder="Add something..." autocomplete="off"
              autocorrect="off" spellcheck="false" maxlength="200" />
       <button type="submit" aria-label="Add item">+</button>
     </div>
@@ -354,39 +340,37 @@
     <ul class="list" id="doneList"></ul>
   </div>
 
-  <footer>Updates every few seconds · shared between devices</footer>
+  <footer>Updates every few seconds &middot; shared between devices</footer>
 </div>
 
 <script>
-  const todoList    = document.getElementById('todoList');
-  const doneList    = document.getElementById('doneList');
-  const doneSection = document.getElementById('doneSection');
-  const syncDot     = document.getElementById('syncDot');
-  const addForm     = document.getElementById('addForm');
-  const newItemEl   = document.getElementById('newItem');
-  const deadlineCheck  = document.getElementById('deadlineCheck');
-  const deadlinePicker = document.getElementById('deadlinePicker');
-  const deadlineDate   = document.getElementById('deadlineDate');
+  var todoList     = document.getElementById('todoList');
+  var doneList     = document.getElementById('doneList');
+  var doneSection  = document.getElementById('doneSection');
+  var syncDot      = document.getElementById('syncDot');
+  var addForm      = document.getElementById('addForm');
+  var newItemEl    = document.getElementById('newItem');
+  var deadlineCheck  = document.getElementById('deadlineCheck');
+  var deadlinePicker = document.getElementById('deadlinePicker');
+  var deadlineDate   = document.getElementById('deadlineDate');
 
-  // Toggle deadline picker visibility
-  deadlineCheck.addEventListener('change', () => {
+  deadlineCheck.addEventListener('change', function() {
     deadlinePicker.classList.toggle('visible', deadlineCheck.checked);
-    if (deadlineCheck.checked) deadlineDate.focus();
-    else deadlineDate.value = '';
+    if (deadlineCheck.checked) { deadlineDate.focus(); }
+    else { deadlineDate.value = ''; }
   });
 
-  let items  = [];
-  let lastTs = 0;
-  let lastN  = -1;
+  var lastTs = 0;
+  var lastN  = -1;
 
   // ── Deadline helpers ──────────────────────────────────────────────────────
-  // Returns 'overdue' | 'approaching' | 'normal' | null
+
   function deadlineStatus(deadline) {
     if (!deadline) return null;
-    const today = new Date();
+    var today = new Date();
     today.setHours(0, 0, 0, 0);
-    const due = new Date(deadline + 'T00:00:00');
-    const diffDays = Math.round((due - today) / 86400000);
+    var due = new Date(deadline + 'T00:00:00');
+    var diffDays = Math.round((due - today) / 86400000);
     if (diffDays < 0)  return 'overdue';
     if (diffDays <= 2) return 'approaching';
     return 'normal';
@@ -394,44 +378,216 @@
 
   function formatDeadline(deadline, status) {
     if (!deadline) return '';
-    const due = new Date(deadline + 'T00:00:00');
-    const today = new Date(); today.setHours(0,0,0,0);
-    const diffDays = Math.round((due - today) / 86400000);
-
-    let label;
-    if (diffDays === 0)       label = 'Today';
-    else if (diffDays === 1)  label = 'Tomorrow';
+    var due = new Date(deadline + 'T00:00:00');
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var diffDays = Math.round((due - today) / 86400000);
+    var label;
+    if (diffDays === 0)      label = 'Today';
+    else if (diffDays === 1) label = 'Tomorrow';
     else if (diffDays === -1) label = 'Yesterday';
-    else if (diffDays < -1)   label = `${Math.abs(diffDays)}d overdue`;
-    else {
-      label = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    const icon = status === 'overdue' ? '⚠️' : status === 'approaching' ? '🔔' : '📅';
-    return `${icon} ${label}`;
+    else if (diffDays < -1)  label = Math.abs(diffDays) + 'd overdue';
+    else label = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    var icon = status === 'overdue' ? 'overdue ' : status === 'approaching' ? 'due ' : '';
+    return icon + label;
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────
-  function render(data) {
-    items = data;
-    const todo = data.filter(i => !i.done);
-    const done = data.filter(i => i.done);
+  // ── Render ────────────────────────────────────────────────────────────────
 
+  function render(data) {
+    var todo = data.filter(function(i) { return !i.done; });
+    var done = data.filter(function(i) { return i.done; });
     renderList(todoList, todo);
     renderList(doneList, done);
     doneSection.style.display = done.length ? '' : 'none';
-
     if (todo.length === 0 && done.length === 0) {
-      todoList.innerHTML = '<li class="empty"><span class="emoji">✅</span>Nothing left to do!</li>';
+      todoList.innerHTML = '<li class="empty"><span class="emoji">&#9989;</span>Nothing left to do!</li>';
     }
   }
 
   function renderList(el, arr) {
-    const existing = {};
-    el.querySelectorAll('[data-id]').forEach(n => existing[n.dataset.id] = n);
-    const newIds = new Set(arr.map(i => String(i.id)));
+    var existing = {};
+    var nodes = el.querySelectorAll('[data-id]');
+    for (var i = 0; i < nodes.length; i++) {
+      existing[nodes[i].dataset.id] = nodes[i];
+    }
+    var newIds = {};
+    for (var i = 0; i < arr.length; i++) { newIds[String(arr[i].id)] = true; }
 
-    Object.keys(existing).forEach(id => { if (!newIds.has(id)) existing[id].remove(); });
+    Object.keys(existing).forEach(function(id) {
+      if (!newIds[id]) existing[id].remove();
+    });
 
-    arr.forEach(item => {
-      const id = String(item.id);
+    for (var i = 0; i < arr.length; i++) {
+      var item = arr[i];
+      var id = String(item.id);
+      var status = item.done ? null : deadlineStatus(item.deadline);
+      var node = existing[id];
+      if (!node) {
+        node = makeItem(item, status);
+        el.appendChild(node);
+      } else {
+        updateItemNode(node, item, status);
+      }
+    }
+
+    if (arr.length === 0) { el.innerHTML = ''; }
+  }
+
+  function buildItemClass(item, status) {
+    var cls = 'item';
+    if (item.done) return cls + ' done-item';
+    if (status === 'overdue') cls += ' overdue';
+    else if (status === 'approaching') cls += ' approaching';
+    return cls;
+  }
+
+  function buildBadgeClass(status) {
+    var cls = 'deadline-badge';
+    if (status === 'overdue') cls += ' overdue';
+    else if (status === 'approaching') cls += ' approaching';
+    return cls;
+  }
+
+  function makeItem(item, status) {
+    var li = document.createElement('li');
+    li.dataset.id = item.id;
+    li.className = buildItemClass(item, status);
+
+    var check = document.createElement('button');
+    check.type = 'button';
+    check.className = 'check-btn' + (item.done ? ' checked' : '');
+    check.setAttribute('aria-label', item.done ? 'Mark undone' : 'Mark done');
+    (function(itemId, itemDone) {
+      check.addEventListener('click', function() { toggleDone(itemId, !itemDone); });
+    })(item.id, !!item.done);
+
+    var body = document.createElement('div');
+    body.className = 'item-body';
+
+    var text = document.createElement('span');
+    text.className = 'item-text';
+    text.textContent = item.text;
+    body.appendChild(text);
+
+    if (item.deadline) {
+      var badge = document.createElement('span');
+      badge.className = buildBadgeClass(status);
+      badge.textContent = formatDeadline(item.deadline, status);
+      body.appendChild(badge);
+    }
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del-btn';
+    del.setAttribute('aria-label', 'Delete');
+    del.textContent = '×';
+    (function(itemId) {
+      del.addEventListener('click', function() { deleteItem(itemId); });
+    })(item.id);
+
+    li.append(check, body, del);
+    return li;
+  }
+
+  function updateItemNode(node, item, status) {
+    node.className = buildItemClass(item, status);
+    var checkBtn = node.querySelector('.check-btn');
+    checkBtn.classList.toggle('checked', !!item.done);
+    var textEl = node.querySelector('.item-text');
+    if (textEl.textContent !== item.text) { textEl.textContent = item.text; }
+    var body = node.querySelector('.item-body');
+    var badge = body.querySelector('.deadline-badge');
+    if (item.deadline) {
+      if (!badge) { badge = document.createElement('span'); body.appendChild(badge); }
+      badge.className = buildBadgeClass(status);
+      badge.textContent = formatDeadline(item.deadline, status);
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // ── API calls ─────────────────────────────────────────────────────────────
+
+  function setSyncing(active) { syncDot.className = 'sync-dot' + (active ? ' syncing' : ''); }
+  function setError()         { syncDot.className = 'sync-dot error'; }
+
+  function fetchItems() {
+    setSyncing(true);
+    fetch('/api/items')
+      .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(data) {
+        render(data);
+        if (data.length) {
+          lastTs = Math.max.apply(null, data.map(function(i) { return i.updated; }));
+        }
+        lastN = data.length;
+        setSyncing(false);
+      })
+      .catch(function() { setError(); });
+  }
+
+  function toggleDone(id, done) {
+    var node = document.querySelector('[data-id="' + id + '"]');
+    if (node) {
+      node.querySelector('.check-btn').classList.toggle('checked', done);
+      node.classList.toggle('done-item', done);
+    }
+    fetch('/api/items/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: done })
+    }).then(function() { fetchItems(); }).catch(function() { setError(); });
+  }
+
+  function deleteItem(id) {
+    var node = document.querySelector('[data-id="' + id + '"]');
+    if (node) { node.style.transform = 'translateX(30px)'; node.style.opacity = '0'; }
+    setTimeout(function() {
+      fetch('/api/items/' + id, { method: 'DELETE' })
+        .then(function() { fetchItems(); })
+        .catch(function() { setError(); });
+    }, 150);
+  }
+
+  // ── Polling ───────────────────────────────────────────────────────────────
+
+  function poll() {
+    fetch('/api/poll')
+      .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d) {
+        if (d.ts !== lastTs || d.n !== lastN) { fetchItems(); }
+        else { setSyncing(false); }
+      })
+      .catch(function() { setError(); });
+  }
+
+  setInterval(poll, 3000);
+
+  // ── Form submit ───────────────────────────────────────────────────────────
+
+  addForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var text = newItemEl.value.trim();
+    if (!text) return;
+    var deadline = deadlineCheck.checked ? deadlineDate.value : null;
+    newItemEl.value = '';
+    deadlineCheck.checked = false;
+    deadlinePicker.classList.remove('visible');
+    deadlineDate.value = '';
+    fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, deadline: deadline || null })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() { fetchItems(); })
+    .catch(function() { setError(); });
+  });
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+
+  fetchItems();
+</script>
+</body>
+</html>
