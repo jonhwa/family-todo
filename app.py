@@ -24,21 +24,25 @@ def close_connection(exception):
 
 def init_db():
     db = sqlite3.connect(DATABASE)
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS items (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
-            text     TEXT    NOT NULL,
-            done     INTEGER NOT NULL DEFAULT 0,
-            deadline TEXT    DEFAULT NULL,
-            created  INTEGER NOT NULL,
-            updated  INTEGER NOT NULL
-        )
-    """)
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS items ("
+        "id       INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "text     TEXT    NOT NULL,"
+        "done     INTEGER NOT NULL DEFAULT 0,"
+        "deadline TEXT    DEFAULT NULL,"
+        "priority TEXT    NOT NULL DEFAULT 'low',"
+        "created  INTEGER NOT NULL,"
+        "updated  INTEGER NOT NULL"
+        ")"
+    )
     db.commit()
 
     cols = [row[1] for row in db.execute("PRAGMA table_info(items)").fetchall()]
     if "deadline" not in cols:
         db.execute("ALTER TABLE items ADD COLUMN deadline TEXT DEFAULT NULL")
+        db.commit()
+    if "priority" not in cols:
+        db.execute("ALTER TABLE items ADD COLUMN priority TEXT NOT NULL DEFAULT 'low'")
         db.commit()
 
     count = db.execute("SELECT COUNT(*) FROM items").fetchone()[0]
@@ -47,11 +51,22 @@ def init_db():
         seeds = ["Dry cleaning", "Drop off charity", "Buy Maya's food", "Buy goldfish"]
         for text in seeds:
             db.execute(
-                "INSERT INTO items (text, done, deadline, created, updated) VALUES (?, 0, NULL, ?, ?)",
+                "INSERT INTO items (text, done, deadline, priority, created, updated)"
+                " VALUES (?, 0, NULL, 'low', ?, ?)",
                 (text, now, now),
             )
         db.commit()
     db.close()
+
+
+SORT_SQL = (
+    "SELECT * FROM items ORDER BY"
+    " done ASC,"
+    " CASE WHEN done=0 AND deadline IS NOT NULL THEN 0 ELSE 1 END ASC,"
+    " CASE WHEN done=0 AND deadline IS NOT NULL THEN deadline ELSE '9999-99-99' END ASC,"
+    " CASE WHEN priority='high' THEN 0 ELSE 1 END ASC,"
+    " created ASC"
+)
 
 
 @app.route("/")
@@ -62,7 +77,7 @@ def index():
 @app.route("/api/items", methods=["GET"])
 def list_items():
     db = get_db()
-    rows = db.execute("SELECT * FROM items ORDER BY done ASC, created DESC").fetchall()
+    rows = db.execute(SORT_SQL).fetchall()
     return jsonify([dict(r) for r in rows])
 
 
@@ -77,11 +92,15 @@ def add_item():
         import re
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", deadline):
             return jsonify({"error": "deadline must be YYYY-MM-DD"}), 400
+    priority = data.get("priority", "low")
+    if priority not in ("high", "low"):
+        priority = "low"
     now = int(time.time())
     db = get_db()
     cur = db.execute(
-        "INSERT INTO items (text, done, deadline, created, updated) VALUES (?, 0, ?, ?, ?)",
-        (text, deadline, now, now),
+        "INSERT INTO items (text, done, deadline, priority, created, updated)"
+        " VALUES (?, 0, ?, ?, ?, ?)",
+        (text, deadline, priority, now, now),
     )
     db.commit()
     row = db.execute("SELECT * FROM items WHERE id = ?", (cur.lastrowid,)).fetchone()
@@ -98,13 +117,14 @@ def update_item(item_id):
         return jsonify({"error": "not found"}), 404
     done = data.get("done", row["done"])
     text = data.get("text", row["text"])
-    if "deadline" in data:
-        deadline = (data["deadline"] or "").strip() or None
+    deadline = (data["deadline"] or "").strip() or None if "deadline" in data else row["deadline"]
+    if "priority" in data:
+        priority = data["priority"] if data["priority"] in ("high", "low") else row["priority"]
     else:
-        deadline = row["deadline"]
+        priority = row["priority"]
     db.execute(
-        "UPDATE items SET done=?, text=?, deadline=?, updated=? WHERE id=?",
-        (int(done), text, deadline, now, item_id),
+        "UPDATE items SET done=?, text=?, deadline=?, priority=?, updated=? WHERE id=?",
+        (int(done), text, deadline, priority, now, item_id),
     )
     db.commit()
     row = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
